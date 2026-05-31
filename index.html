@@ -30,7 +30,8 @@
             font-size: 2rem;
             color: #f1c40f;
         }
-        /* 체스판 설정 (CSS Grid) */
+        
+        /* 체스판 설정 */
         .board {
             display: grid;
             grid-template-columns: repeat(8, 1fr);
@@ -47,18 +48,41 @@
             align-items: center;
             cursor: pointer;
             transition: opacity 0.2s;
+            position: relative; /* 라벨의 절대 위치 기준점이 됩니다 */
         }
         .square:active {
             opacity: 0.7;
         }
+        
         /* 체스판 색상 */
         .light { background-color: #f0d9b5; }
         .dark { background-color: #b58863; }
+
+        /* 행/열 좌표 라벨 디자인 */
+        .label-file {
+            position: absolute;
+            bottom: 2px;
+            right: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        .label-rank {
+            position: absolute;
+            top: 2px;
+            left: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        /* 라벨 색상 (칸 색상과 반전시켜서 잘 보이게) */
+        .light .label-file, .light .label-rank { color: #b58863; }
+        .dark .label-file, .dark .label-rank { color: #f0d9b5; }
         
         #message {
             margin-top: 20px;
             height: 24px;
             font-size: 1.2rem;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -80,30 +104,41 @@
         const scoreElement = document.getElementById('score');
         const messageElement = document.getElementById('message');
 
-        const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-        const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
+        const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']; // 열
+        const ranks = ['8', '7', '6', '5', '4', '3', '2', '1']; // 행
         
         let currentTarget = '';
         let score = 0;
 
-        // 1. 체스판 그리기
+        // 1. 체스판 그리기 (좌표 라벨 추가)
         function createBoard() {
             ranks.forEach((rank, rankIndex) => {
                 files.forEach((file, fileIndex) => {
                     const square = document.createElement('div');
                     square.classList.add('square');
                     
-                    // 짝수 인덱스 합은 밝은 칸, 홀수 인덱스 합은 어두운 칸
+                    // 칸 색상 결정
                     const isLight = (rankIndex + fileIndex) % 2 === 0;
                     square.classList.add(isLight ? 'light' : 'dark');
+                    square.dataset.coord = file + rank;
                     
-                    // 칸마다 좌표 데이터 저장 (예: 'e4')
-                    const coord = file + rank;
-                    square.dataset.coord = coord;
+                    // ⭐️ [추가된 부분] 열 좌표 (a, b, c...) 표시 -> 가장 아래쪽 행(rank 1)에만 추가
+                    if (rankIndex === 7) {
+                        const fileLabel = document.createElement('span');
+                        fileLabel.classList.add('label-file');
+                        fileLabel.textContent = file;
+                        square.appendChild(fileLabel);
+                    }
+
+                    // ⭐️ [추가된 부분] 행 좌표 (1, 2, 3...) 표시 -> 가장 왼쪽 열(file a)에만 추가
+                    if (fileIndex === 0) {
+                        const rankLabel = document.createElement('span');
+                        rankLabel.classList.add('label-rank');
+                        rankLabel.textContent = rank;
+                        square.appendChild(rankLabel);
+                    }
                     
-                    // 클릭 이벤트 추가
-                    square.addEventListener('click', () => handleSquareClick(coord));
-                    
+                    square.addEventListener('click', () => handleSquareClick(file + rank));
                     boardElement.appendChild(square);
                 });
             });
@@ -115,7 +150,7 @@
             const randomRank = ranks[Math.floor(Math.random() * ranks.length)];
             currentTarget = randomFile + randomRank;
             targetElement.textContent = currentTarget;
-            messageElement.textContent = ''; // 메시지 초기화
+            messageElement.textContent = ''; 
         }
 
         // 3. 칸 클릭 시 로직 처리
@@ -125,16 +160,15 @@
                 scoreElement.textContent = score;
                 messageElement.style.color = '#2ecc71';
                 messageElement.textContent = '정답입니다! 🎉';
-                setTimeout(nextCoordinate, 500); // 0.5초 뒤 다음 문제
+                setTimeout(nextCoordinate, 500);
             } else {
                 messageElement.style.color = '#e74c3c';
                 messageElement.textContent = `틀렸습니다! 거기는 ${clickedCoord}입니다.`;
-                score = 0; // 틀리면 점수 초기화
+                score = 0; 
                 scoreElement.textContent = score;
             }
         }
 
-        // 초기화 실행
         createBoard();
         nextCoordinate();
 
@@ -142,7 +176,6 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('서비스 워커가 등록되었습니다.', reg))
                     .catch(err => console.log('서비스 워커 등록 실패:', err));
             });
         }
